@@ -1,37 +1,24 @@
 <?php
 /**
- * 将 Typecho 的附件上传至七牛云存储中。该插件仅为满足个人需求而制作，如有考虑不周的地方，可自行修改。<a href="https://github.com/abelyao/Typecho-QiniuFile" target="_blank">源代码参考</a> &amp; <a href="https://portal.qiniu.com/signup?code=3li4q4loavdxu" target="_blank">注册七牛</a>
+ * 将 Typecho 的附件上传至七牛云存储中。
  * 
- * @package Qiniu File
+ * @package QiniuFile
  * @author abelyao
- * @version 1.2.0
+ * @version 1.3.0
  * @link http://www.abelyao.com/
  * @date 2014-02-22
  */
 
-class QiniuFile_Plugin implements Typecho_Plugin_Interface
-{
-    // 激活插件
-    public static function activate()
-    {
+class QiniuFile_Plugin implements Typecho_Plugin_Interface {
+    public static function activate() {
         Typecho_Plugin::factory('Widget_Upload')->uploadHandle = array('QiniuFile_Plugin', 'uploadHandle');
         Typecho_Plugin::factory('Widget_Upload')->modifyHandle = array('QiniuFile_Plugin', 'modifyHandle');
         Typecho_Plugin::factory('Widget_Upload')->deleteHandle = array('QiniuFile_Plugin', 'deleteHandle');
         Typecho_Plugin::factory('Widget_Upload')->attachmentHandle = array('QiniuFile_Plugin', 'attachmentHandle');
         return _t('插件已经激活，需先配置七牛的信息！');
     }
-
-    
-    // 禁用插件
-    public static function deactivate()
-    {
-        return _t('插件已被禁用');
-    }
-
-    
-    // 插件配置面板
-    public static function config(Typecho_Widget_Helper_Form $form)
-    {
+    public static function deactivate() {}
+    public static function config(Typecho_Widget_Helper_Form $form) {
         $bucket = new Typecho_Widget_Helper_Form_Element_Text('bucket', null, null, _t('空间名称：'));
         $form->addInput($bucket->addRule('required', _t('“空间名称”不能为空！')));
 
@@ -46,35 +33,35 @@ class QiniuFile_Plugin implements Typecho_Plugin_Interface
 
         $savepath = new Typecho_Widget_Helper_Form_Element_Text('savepath', null, '{year}/{month}/', _t('保存路径格式：'), _t('附件保存路径的格式，默认为 Typecho 的 {year}/{month}/ 格式，注意<strong style="color:#C33;">前面不要加 / </strong>！<br />可选参数：{year} 年份、{month} 月份、{day} 日期'));
         $form->addInput($savepath->addRule('required', _t('请填写保存路径格式！')));
+
+        $imgview = new Typecho_Widget_Helper_Form_Element_Radio('imgview', 
+            array('-1' => '不使用缩略图',
+                  '0' => '限定缩略图的长边最多为<code style="color:#d14">LongEdge</code>，短边最多为<code style="color:#d14">ShortEdge</code>，进行等比缩放，不裁剪。',
+                  '1' => '限定缩略图的宽最少为<code style="color:#d14">Width</code>，高最少为<code style="color:#d14">Height</code>，进行等比缩放，居中裁剪。',
+                  '2' => '限定缩略图的宽最多为<code style="color:#d14">Width</code>，高最多为<code style="color:#d14">Height</code>，进行等比缩放，不裁剪。',
+                  '3' => '限定缩略图的宽最少为<code style="color:#d14">Width</code>，高最少为<code style="color:#d14">Height</code>，进行等比缩放，不裁剪。',
+                  '4' => '限定缩略图的长边最少为<code style="color:#d14">LongEdge</code>，短边最少为<code style="color:#d14">ShortEdge</code>，进行等比缩放，不裁剪。',
+                  '5' => '限定缩略图的长边最少为<code style="color:#d14">LongEdge</code>，短边最少为<code style="color:#d14">ShortEdge</code>，进行等比缩放，居中裁剪。',)
+            , '-1', '缩略图模式', NULL);
+        $form->addInput($imgview->multiMode());
+
+        $imgparam = new Typecho_Widget_Helper_Form_Element_Text('imgparam', null, '400|300|400|300', '缩略图参数', '参数格式：<code style="color:#d14">Width|Height|LongEdge|ShortEdge</code>，|前后都不要留空格。');
+        $form->addInput($imgparam);
     }
-
-
-    // 个人用户配置面板
-    public static function personalConfig(Typecho_Widget_Helper_Form $form)
-    {
-    }
-
-
+    public static function personalConfig(Typecho_Widget_Helper_Form $form){}
     // 获得插件配置信息
-    public static function getConfig()
-    {
+    public static function getConfig() {
         return Typecho_Widget::widget('Widget_Options')->plugin('QiniuFile');
     }
-
-
     // 初始化七牛SDK
-    public static function initSDK($accesskey, $sercetkey)
-    {
+    public static function initSDK($accesskey, $sercetkey) {
         // 调用 SDK 设置密钥
         require_once 'sdk/io.php';
         require_once 'sdk/rs.php';
         Qiniu_SetKeys($accesskey, $sercetkey);
     }
-
-
     // 删除文件
-    public static function deleteFile($filepath)
-    {
+    public static function deleteFile($filepath) {
         // 获取插件配置
         $option = self::getConfig();
 
@@ -86,10 +73,8 @@ class QiniuFile_Plugin implements Typecho_Plugin_Interface
         return Qiniu_RS_Delete($client, $option->bucket, $filepath);
     }
 
-
     // 上传文件
-    public static function uploadFile($file, $content = null)
-    {
+    public static function uploadFile($file, $content = null) {
         // 获取上传文件
         if (empty($file['name'])) return false;
 
@@ -139,33 +124,35 @@ class QiniuFile_Plugin implements Typecho_Plugin_Interface
         }
         else return false;
     }
-
-
     // 上传文件处理函数
-    public static function uploadHandle($file)
-    {
+    public static function uploadHandle($file) {
         return self::uploadFile($file);
     }
-
-
     // 修改文件处理函数
-    public static function modifyHandle($content, $file)
-    {
+    public static function modifyHandle($content, $file) {
         return self::uploadFile($file, $content);
     }
-
-
-    // 删除文件
-    public static function deleteHandle(array $content)
-    {
+    // 删除文件处理函数
+    public static function deleteHandle(array $content) {
         self::deleteFile($content['attachment']->path);
     }
-
-
     // 获取实际文件绝对访问路径
-    public static function attachmentHandle(array $content)
-    {
+    public static function attachmentHandle(array $content) {
         $option = self::getConfig();
-        return Typecho_Common::url($content['attachment']->path, $option->domain);
+        $view = '';
+        if($option->imgview > -1 && strpos($content['attachment']->mime, 'image/') !== false){
+            $array = explode('|', $option->imgparam);
+            $param = array('Width' => isset($array['0']) ? $array['0'] : 400,
+                           'Height' => isset($array['1']) ? $array['1'] : 300,
+                           'LongEdge' => isset($array['2']) ? $array['2'] : 400,
+                           'ShortEdge' => isset($array['3']) ? $array['3'] : 300);
+            if(in_array($option->imgview, array('1', '2', '3'))){
+                $view = '/%type%/w/%Width%/h/%Height%';
+            }else if(in_array($option->imgview, array('0', '4', '5'))){
+                $view = '/%type%/w/%LongEdge%/h/%ShortEdge%';
+            }
+            $view = '?imageView2'.str_replace(array('%type%', '%Width%', '%Height%', '%LongEdge%', '%ShortEdge%'), array($option->imgview, $param['Width'], $param['Height'], $param['LongEdge'], $param['ShortEdge']), $view);
+        }
+        return Typecho_Common::url($content['attachment']->path, $option->domain).$view;
     }
 }

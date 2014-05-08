@@ -16,3 +16,7 @@ Qiniu File 是一款 Typecho 的七牛云存储插件，可将 Typecho 的文件
 作者：abelyao    
 主页：[www.abelyao.com](http://www.abelyao.com/)  
 或者通过 Typecho 官方QQ群 `8110782` 找到我
+
+#### 版本更新：
+###### v1.3.0
+ - 加入六种缩略图选项（[@冰剑](https://github.com/binjoo)）
